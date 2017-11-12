@@ -1,4 +1,6 @@
-import http.client, urllib.parse, json
+import http.client
+import json
+import urllib.parse
 
 
 class Twitch:
