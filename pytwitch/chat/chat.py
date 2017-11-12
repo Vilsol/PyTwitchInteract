@@ -1,3 +1,4 @@
+from multiprocessing import Process, Value
 import socket
 import re
 
@@ -15,7 +16,7 @@ class TwitchChat:
         self.port = port
         self.verbose = verbose
         self.debug = debug
-        self.running = True
+        self.running = Value('i', 0)
         self.commands = []
 
         if not token.startswith("oauth:"):
@@ -29,7 +30,11 @@ class TwitchChat:
             self.connection.close()
 
         self.connection = socket.socket()
+        self.connection.settimeout(1)
         self.connection.connect((self.host, self.port))
+
+        if self.verbose:
+            print("Connection established with:", (self.host, self.port))
 
         self.__send_message("PASS {}".format(self.token))
 
@@ -41,7 +46,13 @@ class TwitchChat:
         if 'failed' in authentication.content:
             raise Exception(authentication.content)
 
+        if self.verbose:
+            print("Authenticated successfully:", authentication.content)
+
         self.__send_message("JOIN {}".format(self.channel))
+
+        if self.verbose:
+            print("Joined channel:", self.channel)
 
     def __send_message(self, message):
         if self.verbose:
@@ -55,28 +66,41 @@ class TwitchChat:
     def register_command(self, command, callback, prefix='!'):
         self.commands.append(Command(prefix, command, callback))
 
-    def listen(self):
-        self.running = True
+    def listen(self, async=False):
+        if async:
+            p = Process(target=self._listen_internal, args=(self.running,))
+            p.start()
+        else:
+            self._listen_internal(self.running)
+
+    def _listen_internal(self, running):
+        running.value = 1
 
         self.__reconnect()
 
+        if self.verbose:
+            print("Listening to chat")
+
         line = ""
-        while self.running:
-            line += self.connection.recv(1).decode('UTF-8')
-            if line[-2:] == '\r\n':
-                try:
-                    msg = Message(self, line[:-2])
-                    for command in self.commands:
-                        if command.matches(msg):
-                            command.callback(msg)
-                except MessageProcessException as e:
-                    if self.debug:
-                        print(e)
+        while running.value == 1:
+            try:
+                line += self.connection.recv(1).decode('UTF-8')
+                if line[-2:] == '\r\n':
+                    try:
+                        msg = Message(self, line[:-2])
+                        for command in self.commands:
+                            if command.matches(msg):
+                                command.callback(msg)
+                    except MessageProcessException as e:
+                        if self.debug:
+                            print(e)
 
-                line = ""
+                    line = ""
+            except socket.timeout:
+                pass
 
-    def stop(self):
-        self.running = False
+    def stop_listening(self):
+        self.running.value = 0
 
 
 class Message:
