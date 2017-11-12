@@ -4,7 +4,7 @@ A collection of tools and utilities for easier interaction with Twitch.
 # Examples
 
 ### Chat
-```
+```python
 from pytwitch.chat import TwitchChat
 
 def memes(message):
