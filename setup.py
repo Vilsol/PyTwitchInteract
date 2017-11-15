@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='PyTwitchInteract',
-      version='0.1.0',
+      version='1.0.0',
       description='A collection of tools and utilities for easier interaction with Twitch.',
       author='Vilsol',
       author_email='me@vil.so',

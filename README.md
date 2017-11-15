@@ -5,7 +5,7 @@ A collection of tools and utilities for easier interaction with Twitch.
 
 ### Chat
 ```python
-from pytwitch.chat import TwitchChat
+from pytwitchinteract.chat import TwitchChat
 
 def memes(message):
     message.reply("Thank you for the memes @{}!".format(message.sender))
