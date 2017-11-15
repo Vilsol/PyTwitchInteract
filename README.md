@@ -1,4 +1,4 @@
-# PyTwitch
+# PyTwitchInteract
 A collection of tools and utilities for easier interaction with Twitch.
 
 # Examples
