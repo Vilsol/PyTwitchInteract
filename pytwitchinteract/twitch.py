@@ -1,5 +1,5 @@
-from .utils import PaginatedResponse
-from .models import *
+from pytwitchinteract.utils import PaginatedResponse
+from pytwitchinteract.models import *
 
 import http.client
 import json
