@@ -63,8 +63,8 @@ class TwitchChat:
     def send_chat_message(self, message):
         self.__send_message("PRIVMSG {} :{}".format(self.channel, message))
 
-    def register_command(self, command, callback, prefix='!'):
-        self.commands.append(Command(prefix, command, callback))
+    def register_command(self, command, callback, prefix='!', beginning=True):
+        self.commands.append(Command(prefix, command, beginning, callback))
 
     def listen(self, async=False):
         if async:
@@ -84,13 +84,19 @@ class TwitchChat:
         line = ""
         while running.value == 1:
             try:
-                line += self.connection.recv(1).decode('UTF-8')
+                line += self.connection.recv(1).decode('UTF-8', 'replace')
                 if line[-2:] == '\r\n':
+                    print("Received:", line.rstrip())
                     try:
-                        msg = Message(self, line[:-2])
-                        for command in self.commands:
-                            if command.matches(msg):
-                                command.callback(msg)
+                        if line.startswith("PING :tmi.twitch.tv"):
+                            self.__send_message("PONG tmi.twitch.tv")
+
+                        else:
+                            msg = Message(self, line[:-2])
+                            for command in self.commands:
+                                matches = command.matches(msg)
+                                if len(matches) > 0:
+                                    command.callback(msg, matches)
                     except MessageProcessException as e:
                         if self.debug:
                             print(e)
@@ -141,11 +147,21 @@ class MessageProcessException(Exception):
 
 class Command:
 
-    def __init__(self, prefix, command, callback):
+    def __init__(self, prefix, command, beginning, callback):
+        if not isinstance(command, list):
+            command = [command]
+
         self.prefix = prefix
         self.command = command
+        self.beginning = beginning
         self.callback = callback
-        self.matcher = re.compile("{}{}.*".format(prefix, command))
+
+        regex = "(?:(?:(?<=\s)|(?<=^))({})(?:(?=\s)|(?=$)))+".format("|".join(list(map(lambda z: re.escape(prefix) + re.escape(z), command))))
+
+        if beginning:
+            self.matcher = re.compile("^" + regex)
+        else:
+            self.matcher = re.compile(regex)
 
     def matches(self, message):
-        return self.matcher.search(message.content) is not None
+        return self.matcher.findall(message.content)
