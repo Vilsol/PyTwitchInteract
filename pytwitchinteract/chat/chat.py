@@ -86,7 +86,7 @@ class TwitchChat:
             try:
                 line += self.connection.recv(1).decode('UTF-8', 'replace')
                 if line[-2:] == '\r\n':
-                    print("Received:", line.encode('utf-8').rstrip())
+                    print("Received:", line.encode('ascii', 'ignore').decode('ascii').rstrip())
                     try:
                         if line.startswith("PING :tmi.twitch.tv"):
                             self.__send_message("PONG tmi.twitch.tv")
